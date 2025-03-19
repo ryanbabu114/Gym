@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym/pages/Clientpage/ClientPage.dart';
-import 'package:gym/pages/Homepage/LoginPage.dart';
+import 'package:gym/pages/Homepage/GymHomePage.dart';
 import 'package:gym/pages/Trainerpage/TrainerPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -8,86 +8,107 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: 'https://zajdlwpkfzclakggrbpk.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphamRsd3BrZnpjbGFrZ2dyYnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjYxODUsImV4cCI6MjA1NzUwMjE4NX0.lQMt2o2aZNRtNJVJs4UlP-qA17CE3a6zBto24Ho19ZM',  // Store securely instead of hardcoding
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphamRsd3BrZnpjbGFrZ2dyYnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjYxODUsImV4cCI6MjA1NzUwMjE4NX0.lQMt2o2aZNRtNJVJs4UlP-qA17CE3a6zBto24Ho19ZM', // Store securely instead of hardcoding
   );
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
-
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: session != null
-          ? _redirectUserBasedOnRole(session)
-          : GymHomePage(),
-    );
-  }
-
-  // Function to redirect user based on role
-  Widget _redirectUserBasedOnRole(Session session) {
-    final email = session.user.email!;
-
-    // Example: Checking role based on email (replace with actual role-checking logic)
-    if (email.contains('trainer')) {
-      return TrainerPage(username: email);
-    } else {
-      return ClientPage(username: email);
-    }
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
+class _MyAppState extends State<MyApp> {
+  late Future<Widget> _homePage;
 
-class GymHomePage extends StatelessWidget {
+  @override
+  void initState() {
+    super.initState();
+    _homePage = _redirectUserBasedOnRole();
+
+    // Listen for authentication changes and refresh UI
+    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      setState(() {
+        _homePage = _redirectUserBasedOnRole(); // Refresh role check when user logs in/out
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blueGrey[50],
-      appBar: AppBar(
-        title: const Text('Gym Management System',
-            style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: Colors.indigo[600],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 60),
-            const Text('Are you a Trainer or a Client?',
-                style: TextStyle(fontSize: 25, color: Colors.black)),
-            const SizedBox(height: 50),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const LoginPage(isTrainer: false)),
-                );
-              },
-              child: const Text('Client', style: TextStyle(fontSize: 22)),
-            ),
-            const SizedBox(height: 50),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const LoginPage(isTrainer: true)),
-                );
-              },
-              child: const Text('Trainer', style: TextStyle(fontSize: 22)),
-            ),
-          ],
-        ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: FutureBuilder<Widget>(
+        future: _homePage,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()), // Show loading
+            );
+          }
+          if (snapshot.hasError) {
+            return GymHomePage(); // Fallback in case of an error
+          }
+          return snapshot.data ?? GymHomePage();
+        },
       ),
     );
   }
+
+  // Fetch role from Supabase and redirect user accordingly
+  Future<Widget> _redirectUserBasedOnRole() async {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+
+    if (session == null) {
+      print("DEBUG: No session found! Redirecting to GymHomePage.");
+      return GymHomePage(); // If no session, go to home page
+    }
+
+    final userId = session.user.id;
+    print("DEBUG: Fetching role for user ID: $userId");
+
+    try {
+      final response = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle(); // Prevents crashes
+
+      print("DEBUG: Supabase response: $response");
+
+      // ❌ If role is null or empty, deny access
+      if (response == null || !response.containsKey('role') || response['role'] == null) {
+        print("ERROR: User has NO assigned role! Redirecting to GymHomePage.");
+        return GymHomePage(); // Prevent access if no role
+      }
+
+      final role = response['role'];
+      print("DEBUG: User Role = $role");
+
+      // ✅ Strict Role Checking
+      if (role == 'trainer') {
+        print("DEBUG: Redirecting to TrainerPage.");
+        return TrainerPage(username: session.user.email!);
+      } else if (role == 'client') {
+        print("DEBUG: Redirecting to ClientPage.");
+        return ClientPage(username: session.user.email!);
+      } else {
+        print("ERROR: Invalid role: $role. Redirecting to GymHomePage.");
+        return GymHomePage();
+      }
+    } catch (e) {
+      print("ERROR: Fetching user role failed: $e");
+      return GymHomePage(); // Fallback in case of an error
+    }
+  }
+
 }
+
+
+
 
 
 
