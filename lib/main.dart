@@ -5,7 +5,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: 'https://zajdlwpkfzclakggrbpk.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphamRsd3BrZnpjbGFrZ2dyYnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjYxODUsImV4cCI6MjA1NzUwMjE4NX0.lQMt2o2aZNRtNJVJs4UlP-qA17CE3a6zBto24Ho19ZM',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphamRsd3BrZnpjbGFrZ2dyYnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjYxODUsImV4cCI6MjA1NzUwMjE4NX0.lQMt2o2aZNRtNJVJs4UlP-qA17CE3a6zBto24Ho19ZM',  // Store securely instead of hardcoding
   );
   runApp(const MyApp());
 }
@@ -15,14 +15,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Supabase.instance.client.auth.currentSession != null
-          ? const HomePage()
+      home: session != null
+          ? _redirectUserBasedOnRole(session)
           : GymHomePage(),
     );
   }
+
+  // Function to redirect user based on role
+  Widget _redirectUserBasedOnRole(Session session) {
+    final email = session.user.email!;
+
+    // Example: Checking role based on email (replace with actual role-checking logic)
+    if (email.contains('trainer')) {
+      return TrainerPage(username: email);
+    } else {
+      return ClientPage(username: email);
+    }
+  }
 }
+
 
 class GymHomePage extends StatelessWidget {
   @override
@@ -91,22 +106,34 @@ class _LoginPageState extends State<LoginPage> {
           .showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
       return;
     }
+
     setState(() => isLoading = true);
+
     try {
       final response = await _supabase.auth.signInWithPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
+
       if (response.user != null) {
+        // Redirect based on role
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => TrainerPage(username: 'Binil',)),
+          MaterialPageRoute(
+            builder: (context) => widget.isTrainer
+                ? TrainerPage(username: response.user!.email!)
+                : ClientPage(username: response.user!.email!),
+          ),
         );
       }
+    } on AuthException catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+          .showSnackBar(const SnackBar(content: Text('Something went wrong. Try again.')));
     }
+
     setState(() => isLoading = false);
   }
 
@@ -139,6 +166,24 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: _login,
               child: const Text('Login'),
             ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignUpPage()),
+                );
+              },
+              child: const Text("Don't have an account? Sign Up"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                );
+              },
+              child: const Text("Forgot Password?"),
+            ),
           ],
         ),
       ),
@@ -146,188 +191,157 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+// ------------------------ SIGN UP PAGE ------------------------
+
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Page'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => GymHomePage()),
-              );
-            },
-          )
-        ],
-      ),
-      body: const Center(child: Text('Welcome to the Home Page!')),
-    );
-  }
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
+class _SignUpPageState extends State<SignUpPage> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final _supabase = Supabase.instance.client;
+  bool isLoading = false;
 
-class CreateAccountPageTrainer extends StatefulWidget {
-  @override
-  _CreateAccountPageTrainerState createState() =>
-      _CreateAccountPageTrainerState();
-}
+  Future<void> _signUp() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
+      return;
+    }
 
-class _CreateAccountPageTrainerState extends State<CreateAccountPageTrainer> {
-  final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+    setState(() => isLoading = true);
 
-  final _formKey = GlobalKey<FormState>();
+    try {
+      final response = await _supabase.auth.signUp(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
-  // Name validation
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Name is required';
+      if (response.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Check your email to verify your account.')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
-    return null;
-  }
 
-  // Age validation
-  String? _validateAge(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Age is required';
-    }
-    int? age = int.tryParse(value);
-    if (age == null || age < 18) {
-      return 'You must be at least 18 years old';
-    }
-    return null;
-  }
-
-  // Email validation
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
-    String pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b';
-    RegExp regExp = RegExp(pattern);
-    if (!regExp.hasMatch(value)) {
-      return 'Please enter a valid email address';
-    }
-    return null;
-  }
-
-  // Password validation
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  // Create Account method
-  void _createAccount() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // If the form is valid, show success
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Account Created Successfully!')));
-    }
+    setState(() => isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Create Account'),
-        backgroundColor: Colors.indigo[600], // AppBar color
-      ),
+      appBar: AppBar(title: const Text('Sign Up')),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Name Field
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: _validateName,
-              ),
-              SizedBox(height: 16.0),
-
-              // Age Field
-              TextFormField(
-                controller: _ageController,
-                decoration: InputDecoration(
-                  labelText: 'Age',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: _validateAge,
-              ),
-              SizedBox(height: 16.0),
-
-              // Email Field
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: _validateEmail,
-              ),
-              SizedBox(height: 16.0),
-
-              // Password Field
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: _validatePassword,
-              ),
-              SizedBox(height: 24.0),
-
-              // Create Account Button
-              ElevatedButton(
-                onPressed: _createAccount,
-                child: Text('Create Account'),
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 20),
+            isLoading ? const CircularProgressIndicator() : ElevatedButton(onPressed: _signUp, child: const Text('Create Account')),
+          ],
         ),
       ),
     );
   }
 }
 
+// ---------------------- FORGOT PASSWORD PAGE ----------------------
+
+class ForgotPasswordPage extends StatelessWidget {
+  const ForgotPasswordPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextEditingController _emailController = TextEditingController();
+    final _supabase = Supabase.instance.client;
+
+    Future<void> _resetPassword() async {
+      if (_emailController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter your email to reset password.')));
+        return;
+      }
+
+      await _supabase.auth.resetPasswordForEmail(_emailController.text);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Check your email for password reset link.')),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Forgot Password')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: _resetPassword, child: const Text('Reset Password')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
 class TrainerPage extends StatelessWidget {
   final String username;
 
   TrainerPage({required this.username});
 
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Logout"),
+          content: const Text("Are you sure you want to log out?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Close the dialog
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => GymHomePage()),
+                );
+              },
+              child: const Text("Logout"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Trainer page'),
+        title: Text('Trainer Page'),
         centerTitle: true,
         backgroundColor: Colors.indigo[600],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _confirmLogout(context), // Show confirmation dialog
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -385,7 +399,7 @@ class TrainerPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ExercisePage(),
+                              builder: (context) => Addmembers(),
                             ),
                           );
                         },
@@ -456,6 +470,7 @@ class TrainerPage extends StatelessWidget {
     );
   }
 }
+
 
 class Addmembers extends StatefulWidget {
   @override
@@ -759,85 +774,10 @@ class button2 extends StatelessWidget {
   }
 }
 
-class button3 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Gym Shop'),
-        backgroundColor: Colors.indigo[600],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Gym Shop Page',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Here you can shop for gym equipment, merchandise, etc.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  // Handle shop action here
-                  print('Shopping Started');
-                },
-                child: Text('Go Shopping'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
-class button4 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Gym Shop'),
-        backgroundColor: Colors.indigo[600],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Gym Shop Page',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Here you can shop for gym equipment, merchandise, etc.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  // Handle shop action here
-                  print('Shopping Started');
-                },
-                child: Text('Go Shopping'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+
+
+
 
 class ClientLoginPage extends StatefulWidget {
   @override
@@ -845,93 +785,90 @@ class ClientLoginPage extends StatefulWidget {
 }
 
 class _ClientLoginPageState extends State<ClientLoginPage> {
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool isLoading = false;
+  final _supabase = Supabase.instance.client;
 
-  // Login method to handle validation
-  void _login() {
+  // Login method with authentication
+  void _login() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // If the form is valid, show success
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Logging in...')));
+      setState(() => isLoading = true);
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ClientPage(username: _usernameController.text),
-        ),
-      );
+      try {
+        final response = await _supabase.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        if (response.user != null) {
+          // Navigate to ClientPage after successful login
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ClientPage(username: response.user!.email!),
+            ),
+          );
+        }
+      } on AuthException catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Something went wrong. Try again.')),
+        );
+      }
+
+      setState(() => isLoading = false);
     }
   }
-
-  // Username validation
-  String? _validateUsername(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Username is required';
-    }
-    return null;
-  }
-
-  // Password validation
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  // Navigate to the Create Account page
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: const Text('Client Login'),
         centerTitle: true,
         backgroundColor: Colors.indigo[600],
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Username Field
               TextFormField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  labelText: 'Username',
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: _validateUsername,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) =>
+                value!.isEmpty ? 'Email is required' : null,
               ),
-              SizedBox(height: 16.0),
-
-              // Password Field
+              const SizedBox(height: 16.0),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: _validatePassword,
+                validator: (value) =>
+                value!.length < 6 ? 'Password must be at least 6 characters' : null,
               ),
-              SizedBox(height: 24.0),
-
-              // Login Button
-              ElevatedButton(onPressed: _login, child: Text('Login')),
-              SizedBox(height: 16.0),
-
-              // Create Account Button
+              const SizedBox(height: 24.0),
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                onPressed: _login,
+                child: const Text('Login'),
+              ),
             ],
           ),
         ),
@@ -945,13 +882,47 @@ class ClientPage extends StatelessWidget {
 
   ClientPage({required this.username});
 
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Logout"),
+          content: const Text("Are you sure you want to log out?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Close the dialog
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => GymHomePage()),
+                );
+              },
+              child: const Text("Logout"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Client page'),
+        title: Text('Client Page'),
         centerTitle: true,
         backgroundColor: Colors.indigo[600],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _confirmLogout(context), // Show confirmation dialog
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -991,7 +962,7 @@ class ClientPage extends StatelessWidget {
                           // Navigate to the Payment Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => PayPage()),
+                            MaterialPageRoute(builder: (context) => PayPage1()),
                           );
                         },
                         child: CircleButton(
@@ -1009,7 +980,7 @@ class ClientPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ExercisePage(),
+                              builder: (context) => ExercisePage1(),
                             ),
                           );
                         },
@@ -1027,7 +998,7 @@ class ClientPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ShopPage()),
+                            MaterialPageRoute(builder: (context) => ShopPage1()),
                           );
                         },
                         child: CircleButton(
@@ -1086,6 +1057,7 @@ class ClientPage extends StatelessWidget {
     );
   }
 }
+
 
 class PayPage1 extends StatelessWidget {
   @override
@@ -1198,116 +1170,7 @@ class ShopPage1 extends StatelessWidget {
   }
 }
 
-class button7 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Gym Shop')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Gym Shop Page',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Here you can shop for gym equipment, merchandise, etc.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  // Handle shop action here
-                  print('Shopping Started');
-                },
-                child: Text('Go Shopping'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
-class button6 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Gym Shop')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Gym Shop Page',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Here you can shop for gym equipment, merchandise, etc.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  // Handle shop action here
-                  print('Shopping Started');
-                },
-                child: Text('Go Shopping'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class button5 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Gym Shop')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Gym Shop Page',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Here you can shop for gym equipment, merchandise, etc.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  // Handle shop action here
-                  print('Shopping Started');
-                },
-                child: Text('Go Shopping'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class CircleButton extends StatelessWidget {
   final IconData icon;
