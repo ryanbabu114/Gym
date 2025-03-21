@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../main.dart';
 import '../Homepage/GymHomePage.dart';
 import 'Addmembers.dart';
+import 'ExercisePage.dart';
 import 'PayPage.dart';
 import 'button2.dart';
 
@@ -153,6 +154,28 @@ class TrainerPage extends StatelessWidget {
                           imageurl: "images/attendance.webp",
                         ),
                       ),
+
+                      GestureDetector(
+                        onTap: () {
+                          // Navigate to Exercise Page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ExercisePage(),
+                            ),
+                          );
+                        },
+                        child: CircleButton(
+                          icon: Icons.fitness_center,
+                          color: Colors.orange,
+                          label: 'Exercise',
+                          imageurl: "images/exercies.jpg",
+                        ),
+                      ),
+                      SizedBox(height: 15),
+                      // Circular Shop Button
+
+
                     ],
                   ),
                 ],
