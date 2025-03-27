@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../ChatBotPage.dart';
 import '../../main.dart';
 import '../Homepage/GymHomePage.dart';
 import 'Addmembers.dart';
@@ -190,8 +191,10 @@ class TrainerPage extends StatelessWidget {
             // Smaller size for the circle button
             child: ElevatedButton(
               onPressed: () {
-                // Define your AI button action here
-                print("AI Button Pressed!");
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ChatBotPage()),
+                );
               },
               child: Text(
                 'AI',
