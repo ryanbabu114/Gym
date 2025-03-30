@@ -38,7 +38,7 @@ class _LivePosturePageState extends State<LivePosturePage> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.2:5000/posture-correction'), // Replace with your Flask API IP
+        Uri.parse('http://192.168.1.5:5000/posture-correction'), // Replace with your Flask API IP
       );
 
       request.files.add(await http.MultipartFile.fromPath('frame', imageFile.path));
