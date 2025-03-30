@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gym/pages/Trainerpage/members.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../ChatBotPage.dart';
 import '../../main.dart';
+import '../Trainerpage/attendance.dart';
 import '../Homepage/GymHomePage.dart';
 import 'Addmembers.dart';
 import 'ExercisePage.dart';
@@ -94,7 +96,7 @@ class TrainerPage extends StatelessWidget {
                           // Navigate to the Payment Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => PayPage()),
+                            MaterialPageRoute(builder: (context) => member()),
                           );
                         },
                         child: CircleButton(
@@ -130,7 +132,7 @@ class TrainerPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => button2()),
+                            MaterialPageRoute(builder: (context) => PayPage()),
                           );
                         },
                         child: CircleButton(
@@ -145,7 +147,7 @@ class TrainerPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => button2()),
+                            MaterialPageRoute(builder: (context) => AttendanceScreen()),
                           );
                         },
                         child: CircleButton(

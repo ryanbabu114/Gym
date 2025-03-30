@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gym/pages/Clientpage/ExercisePage2.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../ChatBotPage.dart';
@@ -7,7 +8,8 @@ import '../Homepage/GymHomePage.dart';
 import '../Trainerpage/button2.dart';
 import 'ExercisePage1.dart';
 import 'PayPage1.dart';
-import 'ShopPage1.dart';
+import 'ShopPage.dart';
+import 'attendance.dart';
 
 class ClientPage extends StatelessWidget {
   final String username;
@@ -112,7 +114,7 @@ class ClientPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ExercisePage1(),
+                              builder: (context) => ExercisesScreen(),
                             ),
                           );
                         },
@@ -130,7 +132,7 @@ class ClientPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ShopPage1()),
+                            MaterialPageRoute(builder: (context) => ShopPage()),
                           );
                         },
                         child: CircleButton(
@@ -147,7 +149,9 @@ class ClientPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => button2()),
+                            MaterialPageRoute(builder: (context) => AttendanceScreen(
+                            username: '',
+                          )),
                           );
                         },
                         child: CircleButton(
@@ -160,6 +164,23 @@ class ClientPage extends StatelessWidget {
                       SizedBox(height: 15),
 
                       // Additional Shop Button 3
+                      GestureDetector(
+                        onTap: () {
+                          // Navigate to Shop Page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ExercisePage1()),
+                          );
+                        },
+                        child: CircleButton(
+                          icon: Icons.shopping_cart,
+                          color: Colors.blue,
+                          label: 'Posture',
+                          imageurl: "images/posture.jpg",
+                        ),
+                      ),
+                      SizedBox(height: 15),
                     ],
                   ),
                 ],

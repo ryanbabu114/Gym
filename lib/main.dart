@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gym/pages/Clientpage/ClientPage.dart';
+import 'package:gym/pages/Clientpage/cart_provider.dart';
 import 'package:gym/pages/Homepage/GymHomePage.dart';
 import 'package:gym/pages/Trainerpage/TrainerPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +12,15 @@ Future<void> main() async {
     url: 'https://zajdlwpkfzclakggrbpk.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphamRsd3BrZnpjbGFrZ2dyYnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjYxODUsImV4cCI6MjA1NzUwMjE4NX0.lQMt2o2aZNRtNJVJs4UlP-qA17CE3a6zBto24Ho19ZM', // Store securely instead of hardcoding
   );
-  runApp(const MyApp());
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => CartProvider()), // Cart Provider
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -104,14 +114,7 @@ class _MyAppState extends State<MyApp> {
       return GymHomePage(); // Fallback in case of an error
     }
   }
-
 }
-
-
-
-
-
-
 
 class CircleButton extends StatelessWidget {
   final IconData icon;
