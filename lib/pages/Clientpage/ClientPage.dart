@@ -96,7 +96,7 @@ class ClientPage extends StatelessWidget {
                           // Navigate to the Payment Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => PayPage1()),
+                            MaterialPageRoute(builder: (context) => PaymentScreen(username: username)),
                           );
                         },
                         child: CircleButton(

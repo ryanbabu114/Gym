@@ -132,7 +132,7 @@ class TrainerPage extends StatelessWidget {
                           // Navigate to Shop Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => PayPage()),
+                            MaterialPageRoute(builder: (context) => PaymentListView()),
                           );
                         },
                         child: CircleButton(
