@@ -8,7 +8,7 @@ class GymHomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.blueGrey[50],
       appBar: AppBar(
-        title: const Text('Gym Management System',
+        title: const Text('Strive Fit',
             style: TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: Colors.indigo[600],
