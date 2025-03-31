@@ -51,7 +51,7 @@ class ClientPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Client Page'),
         centerTitle: true,
-        backgroundColor: Colors.indigo[600],
+        backgroundColor: Colors.blue[600],
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -171,7 +171,7 @@ class ClientPage extends StatelessWidget {
                           icon: Icons.person_2_outlined,
                           color: Colors.red,
                           label: 'Your attendance',
-                          imageurl: "images/attendance.webp",
+                          imageurl: "images/attend.jpg",
                         ),
                       ),
                       SizedBox(height: 15),

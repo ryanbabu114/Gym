@@ -167,7 +167,7 @@ class TrainerPage extends StatelessWidget {
                           icon: Icons.shopping_cart,
                           color: Colors.yellow,
                           label: 'Attendance',
-                          imageurl: "images/attendance.webp",
+                          imageurl: "images/attend.jpg",
                         ),
                       ),
 
