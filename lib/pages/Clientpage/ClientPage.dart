@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym/pages/Clientpage/ExercisePage2.dart';
+import 'package:gym/pages/Clientpage/profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../ChatBotPage.dart';
@@ -55,6 +56,18 @@ class ClientPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _confirmLogout(context), // Show confirmation dialog
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_2_rounded),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfilesScreen(
+                      username: username), // ✅ Pass the username correctly
+                ),
+              );
+            },
           ),
         ],
       ),
