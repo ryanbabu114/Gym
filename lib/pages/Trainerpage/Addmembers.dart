@@ -12,7 +12,10 @@ class _Addmembers extends State<Addmembers> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  final _supabase = Supabase.instance.client;
   final _formKey = GlobalKey<FormState>();
+  bool isLoading = false;
+  String _selectedRole = 'client'; // Default role selection
 
   // Name validation
   String? _validateName(String? value) {
@@ -58,13 +61,40 @@ class _Addmembers extends State<Addmembers> {
     return null;
   }
 
-  // Create Account method
-  void _createAccount() {
+  // SignUp method
+  Future<void> _signUp() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // If the form is valid, show success
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Account Created Successfully!')));
+      setState(() => isLoading = true);
+
+      try {
+        final response = await _supabase.auth.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        if (response.user != null) {
+          final insertResponse = await _supabase.from('profiles').insert({
+            'user_id': response.user!.id,
+            'email': response.user!.email,
+            'name': _nameController.text.trim(),
+            'age': int.tryParse(_ageController.text.trim()) ?? 0,
+            'role': _selectedRole, // Store selected role (trainer or client)
+          }).select().single();
+
+          if (insertResponse['role'] == null) {
+            throw Exception("Failed to assign role. Try again.");
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Account Created! Check your email to verify.')),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+
+      setState(() => isLoading = false);
     }
   }
 
@@ -72,11 +102,11 @@ class _Addmembers extends State<Addmembers> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Account'),
+        title: const Text('Create Account'),
         backgroundColor: Colors.indigo[600],
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -86,54 +116,75 @@ class _Addmembers extends State<Addmembers> {
               // Name Field
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Name',
                   border: OutlineInputBorder(),
                 ),
                 validator: _validateName,
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
 
               // Age Field
               TextFormField(
                 controller: _ageController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Age',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
                 validator: _validateAge,
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
 
               // Email Field
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: _validateEmail,
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
 
               // Password Field
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
                 validator: _validatePassword,
               ),
-              SizedBox(height: 24.0),
+              const SizedBox(height: 16.0),
+
+              // Dropdown to select role (Trainer or Client)
+              DropdownButtonFormField<String>(
+                value: _selectedRole,
+                items: [
+                  const DropdownMenuItem(value: 'client', child: Text('Client')),
+                  const DropdownMenuItem(value: 'trainer', child: Text('Trainer')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRole = value!;
+                  });
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Select Role',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24.0),
 
               // Create Account Button
-              ElevatedButton(
-                onPressed: _createAccount,
-                child: Text('Create Account'),
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                onPressed: _signUp,
+                child: const Text('Create Account'),
               ),
             ],
           ),
