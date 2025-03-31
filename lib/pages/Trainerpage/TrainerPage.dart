@@ -51,7 +51,7 @@ class TrainerPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Trainer Page'),
         centerTitle: true,
-        backgroundColor: Colors.indigo[600],
+        backgroundColor: Colors.lightBlue[800],
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -109,7 +109,7 @@ class TrainerPage extends StatelessWidget {
                           // Navigate to the Payment Page
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => member()),
+                            MaterialPageRoute(builder: (context) => MemberPage()),
                           );
                         },
                         child: CircleButton(
