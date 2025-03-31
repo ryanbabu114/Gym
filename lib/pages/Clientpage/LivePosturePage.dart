@@ -15,6 +15,9 @@ class _LivePosturePageState extends State<LivePosturePage> {
   List<CameraDescription>? _cameras;
   String _postureResult = "Waiting for analysis...";
   bool _isStreaming = false;
+  String selectedExercise = 'Squat'; // Default exercise
+
+  List<String> exercises = ['Squat', 'Push-Up', 'Plank', 'Lunge'];
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _LivePosturePageState extends State<LivePosturePage> {
         Uri.parse('http://192.168.1.5:5000/posture-correction'), // Replace with your Flask API IP
       );
 
+      request.fields['exercise'] = selectedExercise; // Send selected exercise
       request.files.add(await http.MultipartFile.fromPath('frame', imageFile.path));
 
       var response = await request.send();
@@ -50,7 +54,7 @@ class _LivePosturePageState extends State<LivePosturePage> {
       setState(() {
         _postureResult = jsonResponse['status'] == 'success'
             ? jsonResponse['posture'] + " - " + jsonResponse['corrections'].join(", ")
-            : "No posture detected";
+            : "Error: " + jsonResponse['message'];
       });
     } catch (e) {
       print("Error sending frame: $e");
@@ -82,24 +86,64 @@ class _LivePosturePageState extends State<LivePosturePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Live Posture Correction")),
-      body: Column(
-        children: [
-          _cameraController != null && _cameraController!.value.isInitialized
-              ? CameraPreview(_cameraController!)
-              : CircularProgressIndicator(),
-          SizedBox(height: 10),
-          Text(_postureResult, style: TextStyle(fontSize: 18)),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _startStreaming,
-            child: Text("Start Posture Analysis"),
-          ),
-          ElevatedButton(
-            onPressed: _stopStreaming,
-            child: Text("Stop"),
-          ),
-        ],
+      body: SingleChildScrollView( // Prevents overflow issues
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (_cameraController != null && _cameraController!.value.isInitialized)
+              Container(
+                padding: EdgeInsets.all(10), // Padding to prevent overflow
+                child: AspectRatio(
+                  aspectRatio: 3 / 4, // Set to 3:4 aspect ratio, // Maintain correct ratio
+                  child: CameraPreview(_cameraController!),
+                ),
+              )
+            else
+              CircularProgressIndicator(),
+
+            SizedBox(height: 10),
+
+            // Dropdown for selecting the exercise
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: DropdownButtonFormField<String>(
+                value: selectedExercise,
+                decoration: InputDecoration(
+                  labelText: "Select Exercise",
+                  border: OutlineInputBorder(),
+                ),
+                items: ["Squat", "Push-Up", "Plank", "Lunge"].map((exercise) {
+                  return DropdownMenuItem<String>(
+                    value: exercise,
+                    child: Text(exercise),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedExercise = value!;
+                  });
+                },
+              ),
+            ),
+
+            SizedBox(height: 10),
+
+            Text(_postureResult, style: TextStyle(fontSize: 18)),
+            SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: _startStreaming,
+              child: Text("Start Posture Analysis"),
+            ),
+            ElevatedButton(
+              onPressed: _stopStreaming,
+              child: Text("Stop"),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+
 }
