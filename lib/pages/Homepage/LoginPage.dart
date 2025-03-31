@@ -6,7 +6,6 @@ import '../Trainerpage/TrainerPage.dart';
 import 'ForgotPasswordPage.dart';
 import 'SignUpPage.dart';
 
-
 class LoginPage extends StatefulWidget {
   final bool isTrainer;
   const LoginPage({super.key, required this.isTrainer});
@@ -44,14 +43,14 @@ class _LoginPageState extends State<LoginPage> {
             .from('profiles')
             .select('role')
             .eq('user_id', userId)
-            .maybeSingle(); // Use maybeSingle() to avoid crashes
+            .maybeSingle();
 
         // 🛑 If role is missing, prevent login
         if (roleResponse == null || !roleResponse.containsKey('role')) {
           print("ERROR: No role assigned to user!");
           ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Your account has no assigned role.')));
-          await _supabase.auth.signOut(); // Log out user to prevent access
+          await _supabase.auth.signOut();
           setState(() => isLoading = false);
           return;
         }
@@ -75,7 +74,7 @@ class _LoginPageState extends State<LoginPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Unauthorized login attempt!')),
           );
-          await _supabase.auth.signOut(); // Log out user to prevent access
+          await _supabase.auth.signOut();
         }
       }
     } on AuthException catch (e) {
@@ -88,7 +87,6 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => isLoading = false);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -119,15 +117,19 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: _login,
               child: const Text('Login'),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignUpPage()),
-                );
-              },
-              child: const Text("Don't have an account? Sign Up"),
-            ),
+
+            // ✅ Conditionally show Sign Up only for Trainers
+            if (widget.isTrainer)
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignUpPage()),
+                  );
+                },
+                child: const Text("Don't have an account? Sign Up"),
+              ),
+
             TextButton(
               onPressed: () {
                 Navigator.push(
