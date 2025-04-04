@@ -94,7 +94,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (amount <= 0 || selectedTrainer == null) return;
 
     var options = {
-      'key': 'rzp_test_DxxWvQw3mGRy3G',
+      'key': 'rzp_test_zH10qs9atlSzwy',
       'amount': (amount * 100).toInt(),
       'currency': 'INR',
       'name': userName ?? "User",
