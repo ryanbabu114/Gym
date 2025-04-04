@@ -41,7 +41,7 @@ class _LivePosturePageState extends State<LivePosturePage> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.5:5000/posture-correction'), // Replace with your Flask API IP
+        Uri.parse('http://172.20.10.4:5000/posture-correction'), // Replace with your Flask API IP
       );
 
       request.fields['exercise'] = selectedExercise; // Send selected exercise
